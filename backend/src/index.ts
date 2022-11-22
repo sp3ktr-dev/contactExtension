@@ -32,9 +32,9 @@ app.post('/createparticipants', (request: Request, response: Response) => {
     const jsonParticipants:I_Participant[] = request.body;
     const participantsValues = [];
     for (const participant of jsonParticipants) {
-        participantsValues.push(`('${participant.type}', '${participant.name}', '${participant.job}', '${participant.company}', '${participant.location}', '${participant.link}')`);
+        participantsValues.push(`("${participant.type}", "${participant.name}", "${participant.job}", "${participant.company}", "${participant.location}", "${participant.link}")`);
     }
-    dbConnection.query(`INSERT INTO participants (type, name, job, company, location, link) VALUES ${participantsValues.join(',')}`);
+    dbConnection.query(`INSERT IGNORE INTO participants (type, name, job, company, location, link) VALUES ${participantsValues.join(',')}`);
     response.status(201).send();
 });
 

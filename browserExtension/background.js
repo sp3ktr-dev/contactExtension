@@ -1,22 +1,42 @@
-let action, participantsList, readingIndex;
+let action, readingId;
 
 const start = () => {
-    action = "start";
-    readingIndex = 0;
+    action = 'start';
     sendAction(action);
 };
 
-const getContacts = () => {
-    action = "getContacts";
-    if (readingIndex < participantsList.length) {
-        chrome.tabs.query({ currentWindow: true }, function (tab) {
-            chrome.tabs.update(tab[0].id, {
-                url: participantsList[readingIndex].link,
-            });
+const getContacts = (participant) => {
+    action = 'getContacts';
+    readingId = participant.id;
+    chrome.tabs.query({ currentWindow: true }, function (tab) {
+        chrome.tabs.update(tab[0].id, {
+            url: participant.link,
         });
-    } else {
-        sendAction("showResult", participantsList);
-    }
+    });
+};
+
+const loadParticipant = () => {
+    fetch('http://127.0.0.1:5000/getparticipant').then((response) => response.json()).then((participant) => {
+        getContacts(participant);
+    });
+};
+
+const saveParticipants = (json) => {
+    fetch('http://127.0.0.1:5000/createparticipants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(json),
+    });
+};
+
+const saveContacts = (json) => {
+    fetch(`http://127.0.0.1:5000/updatecontacts/${readingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(json),
+    }).then(() => {
+        loadParticipant();
+    });
 };
 
 const sendAction = (action, data = false) => {
@@ -25,22 +45,18 @@ const sendAction = (action, data = false) => {
     });
 };
 
-//SEND WORK MSG TO TAB
-chrome.runtime.onMessage.addListener(function (request, sender) {
-    if (request.PageStatus === "pageLoaded" && action === "getContacts") {
-        sendAction("readContacts");
-    }
-});
-
 //FINISHED ACTIONS RESPONSES
 chrome.runtime.onMessage.addListener(function (request, sender) {
-    if (request.type == "participantsList") {
-        participantsList = request.data;
-        getContacts();
-    } else if (request.type == "contactsList") {
-        participantsList[readingIndex].contacts = request.data;
-        readingIndex++;
-        getContacts();
+    if (request.type == 'participantsList') {
+        saveParticipants(request.data);
+    } else if (request.type == 'contactsList') {
+        saveContacts(request.data);
+    } else if (request.type == 'listLoaded') {
+        loadParticipant();
+    } else if (request.type == 'doReadContacts') {
+        loadParticipant();
+    } else if (request.type == 'pageLoaded' && action === 'getContacts') {
+        sendAction('readContacts');
     }
 });
 
